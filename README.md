@@ -201,4 +201,15 @@ example: safety mySugarInstance
                         or
          safety mySugarInstance ken.brill.plus@gmail.com
 ```
-When you install a customers instance on your local 
+When you install a customers instance on your local machine it might be possible for that instance
+to start sending emails to the customer based on actions you take.  With this command you can rewrite
+all of the email addresses on the system to point at an email address you can read. 
+
+###Set all the passwords for an instance
+```bash
+Usage: setPasswords [INSTANCE_NAME]
+Resets all user passwords in an instance to 'asdf'.  Also resets
+the admin user if it was repurposed or deleted.
+
+example: setPasswords mySugarInstance
+```
