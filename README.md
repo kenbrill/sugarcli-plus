@@ -1,567 +1,204 @@
 # SugarCli
-SugarCli is a command line tool to install and manage SugarCRM installations.
-
-
-# Installing
-Get the latest phar archive at `https://getsugarcli.inetprocess.fr/sugarcli.phar`. Allow the execution and run it.
-```
-wget 'https://getsugarcli.inetprocess.fr/sugarcli.phar'
-chmod +x ./sugarcli.phar
-./sugarcli.phar
-```
-
-Or clone this git repository and use `./bin/sugarcli`.
-
+SugarCli is a command line tool to install and manage SugarCRM installations.  This version is modified for Plus Consulting use.
 
 # Building
-Clone the git repository and run `php -dphar.readonly=0 bin/compile`.
-It will build the `sugarcli.phar` at the top of the git project.
+Clone the git repository and copy the commands in the bash/ directory to your /usr/bin directory.
 
+#Commands
+###Backup a SugarCRM instance
 
-# Configuration
-You can save some configurations options in different location. The latter one will override the previous one:
-`/etc/sugarclirc`
-`$HOME/.sugarclirc`
-`./.sugarclirc`
-
-Command line parameters will override these configurations.
-
-## Example
-```yaml
----
-sugarcrm:
-    path: path/to/sugar
-    url: http://external.url
-```
-
-
-# Usage
-`./sugarcli.phar --help`: This will give you the help and list of available commands.
-
-
-
-# Development
-## Run tests
-Copy the file `phpunit.xml.dist` to `phpunit.xml` and edit the environment variables.
-
-Run the full test suite with `bin/phpunit` or exclude groups to avoid required external resources `bin/phpunit --exclude-group inventory,sugarcrm-db`
-
-__Available groups__:
-* inventory
-* sugarcrm-db
-* sugarcrm-path
-* sugarcrm-url
-
-
-
-# Commands
-* [Clean language files](#clean-language-files)
-* [Install a SugarCRM](#install-a-sugarcrm)
-* [Manage `fields_meta_data` and `relationships` tables](#manage-fields_meta_data-table)
-* [Inventory](#inventory)
-* [User Management](#user-management)
-* [System](#system)
-* [Logic Hooks](#logic-hooks)
-* [Vardefs Extractor](#vardefs-extractor)
-* [Code Generator](#code-generator)
-* [Data Anonymization](#data-anonymization)
-
-
-
-## Clean language files
-The main command is `./sugarcli.phar clean:langfiles`
-#### Parameters
 ```bash
---no-sort           Do not sort the files contents. It will still remove duplicates. Useful for testing.
--t, --test          Try to rewrite the files without modifying the contents. Imply --no-sort.
--p, --path=PATH     Path to SugarCRM installation.
+Usage: backup [-hducs] [INSTANCE_NAME]...
+Backup a SugarCRM instance to your home directory
+
+    -h          Display this help and exit
+    -d          Delete previous backup(s) from your home directory
+    -u          Include upload/ directory (excluded by default)
+    -c          Include cache/ directory  (excluded by default)
+    -s          Use simple names (no date in name)
+
+    
+    Example:   backup -d SugarCustomer
 ```
-#### Test run
-`./sugarcli.phar clean:langfiles --test path/to/sugar`
+This will backup both the files and database to your home directory.  By default
+it will not backup the upload/ or cache/ directories, if you want those backed up you
+have to tell the backup command like this
 
-This will parse the custom languages files from sugar. It should return the files as is.
-
-
-### Clean without sorting.
-`./sugarcli.phar clean:langfiles --no-sort path/to/sugar`
-
-This will clean the lang files by removing unecessary whitespaces and remove duplicates in variables definitions.
-
-### Clean and sort
-`./sugarcli.phar clean:langfiles path/to/sugar`
-
-This will clean and sort the language files. All defined variables will be sorted by name.
-
-
-## Install a SugarCRM
-The main command is `./sugarcli.phar install`
-
-Subcommands are :
 ```bash
-./sugarcli.phar install:config:get
-./sugarcli.phar install:check
-./sugarcli.phar install:run
+    backup -duc [SugarInstance]
 ```
 
-### Configure your installation
-`./sugarcli.phar install:config:get` will create a `config_si.php` in the current directory.
+The 'Simple Names' option is really only used for the CLONE command explained later 
+in this document.
 
-This provides default settings for the installer. You will need to complete some require parameters like db information, usernames and passwords. Required fields are in the form `<VALUE>`.
+###Restore a SugarCRM instance
 
-#### `install:config:get` - Parameters
 ```bash
--c, --config=CONFIG   Write to this file instead of config_si.php. [default: "config_si.php"]
--f, --force           Overwrite existing file
+Usage: restore [-hd] [INSTANCE_NAME] [FILES_ZIP] [SQL_ZIP]
+Restore a SugarCRM instance to the directory [INSTANCE_NAME].  
+The .htaccess file and config.php will be updated to correct values.
+
+    -h          display this help and exit
+    -d          delete the destination directory
+    -u          Leave the upload directory from the instance in place
+    -c          Leave the cache directory from the instance in place
+
+example: restore mySugarInstance ~/mySugarInstance.tgz ~/mySugarInstance.sql.gz
 ```
 
-#### `install:check` - Parameters
+The SQL_ZIP parameter is optional.  So if you have a file from OnDemand where both
+the files and the SQL dump are all in the same file then just provide the 
+FILES_ZIP parameter.
+
+By default the contents of the uploads/ and cache/ directories are deleted before
+the files are copied to the http directory.  If you want to retain them then you have 
+to add the -u and/or -c parameters.
+
+This command will handle gzipped, tarred or zip files.
+
+###Clone a SugarCRM instance
 ```bash
--p, --path=PATH       Path to SugarCRM installation.
+Usage: clone [-hd] [NEW_INSTANCE_NAME] [CURRENT_INSTANCE_NAME]
+Clone a SugarCRM instance to the directory [NEW_INSTANCE_NAME] using the [CURRENT_INSTANCE_NAME]
+as the source.
+    -h          display this help and exit
+    -d          delete the destination directory
+
+example: clone myNewSugarInstance myCurrentSugarInstance
 ```
 
-### Run the installer
-`./sugarcli.phar install:run [-f|--force] [-s|--source[="..."]] [-c|--config[="..."]] path url`
+This command simply runs a 'backup' and then a 'restore' and then deletes the 
+backup from the home directory for you.
 
-You need to specify an installation path and the public url for your sugar installation.
-
-The installer will extract a SugarCRM installation package named sugar.zip or specified with the `--source` option.
-
-It will use the `--config` option to use for the installation.
-
-#### `install:run` - Parameters
+###Make a backup of a table
 ```bash
--f, --force           Force installer to remove target directory if present.
--s, --source=SOURCE   Path to SugarCRM installation package. [default: "sugar.zip"]
--c, --config=CONFIG   PHP file to use as configuration for the installation. [default: "config_si.php"]
--p, --path=PATH       Path to SugarCRM installation.
+Usage: copyTable [-d] [INSTANCE_NAME] [TABLE_NAME] [NEW_TABLE_NAME]
+Make a copy of a database table.
+
+    -d          Drop [NEW_TABLE_NAME] if it exists
+    -h          Display this help and exit
+
+example: copyTable -d mySugarInstance accounts accounts_temp
 ```
 
+To restore the original table back into place you would run
 
-### Examples
 ```bash
-./sugarcli.phar install:config:get
-nano config_si.php
-./sugarcli.phar install:run -v ~/www/sugar7 http://myserver.example.org/sugar7 --source ~/sugar_package/SugarPro-Full-7.2.2.1.zip
+copyTable -d mySugarInstance accounts_temp accounts
 ```
-Use `-v` or `-vv` to add more verbose output.
 
-
-## Manage `fields_meta_data` and `relationships` tables
-Two groups of commands are available to export and sync the content of the fields_meta_data table (custom fields from studio)
-and relationships (default and custom relationships).
-
-The first has `metadata` as a prefix and the second has `rels`
-
-By default the metadata definition file will be `<sugar_path>/../db/fields_meta_data.yaml` and the relationships will be `<sugar_path>/../db/relationships.yaml`.
-
-You can override it with the `--metadata-file` parameter for all the `metadata` sub-commands and `--file` parameter for all the `rels` subcommands.
-
-The main command are then `./sugarcli.phar metadata` and `./sugarcli.phar rels`
-
-Subcommands are :
+###Create an installable package
 ```bash
-./sugarcli.phar metadata:loadfromfile
-./sugarcli.phar metadata:dumptofile
-./sugarcli.phar metadata:status
+Usage: makePackage [-nvamcrtedhu#s$] [INSTANCE]...
+Dump the custom directory, custom modules and an array of tables to an installable package
 
-./sugarcli.phar rels:loadfromfile
-./sugarcli.phar rels:dumptofile
-./sugarcli.phar rels:status
-
+    -h          Display this help and exit
+    -n[string]  A name for the new package.
+    -v[number]  A version number for the new package. (ex 1.2)
+    -s[string]  Include only files that contain this string, AKA Search.
+    -a          Add the ACL/Roles tables to the package.
+    -t          Add the Teams tables to the package.
+    -r          Add the Reports table (saved_reports) to the package.
+    -m          Add the modulebuilder/ directory to the package.
+    -c          Add the custom fields table (fields_meta_data) to the package.
+    -d          Include all the data from custom modules in the package.
+    -e          Truncate tables where data is added, otherwise data will be updated
+    -o          Include only english language files in the package.
+    -u[number]  Include only files that were updated in the last 15 minutes.
 ```
-
-The following explanations are made for `metadata` but are similar for `rels`
-
-### Load definition to the database
-`sugarcli {type}:loadfromfile`
-Load fields defined in the meta data file to update the database.
-
-#### `metadata:loadfromfile` Parameters
+This command will create an installable zip file for you from a SugarCRM instance.  If you 
+simply wanted to create an installable module from all custom code and custom modules 
+you would use the command
 ```bash
--s, --sql                          Print the sql queries that would have been executed.
--f, --force                        Really execute the SQL queries to modify the database.
--a, --add                          Add new fields from the file to the DB.
--d, --del                          Delete fields not present in the metadata file from the DB.
--u, --update                       Update the DB for modified fields in metadata file.
--p, --path=PATH                    Path to SugarCRM installation.
--m, --metadata-file=METADATA-FILE  Path to the metadata file. (default: "<sugar_path>/../db/fields_meta_data.yaml")
+makePackage mySugarInstance
 ```
+This would add ALL the files in the custom directory to your installer.  The moduleBuilder
+directory is left out by default, you can add it back with -m. Also left out would
+be any files that are complied from the custom/Extensions directory.
 
-#### `rels:loadfromfile` Parameters
+You could add a name and a version to that file with
 ```bash
--s, --sql             Print the sql queries that would have been executed.
--f, --force           Really execute the SQL queries to modify the database.
--a, --add             Add new fields from the file to the DB.
--d, --del             Delete fields not present in the relationships file from the DB.
--u, --update          Update the DB for modified fields in relationships file.
--p, --path=PATH       Path to SugarCRM installation.
-    --file=FILE       Path to the rels file. (default: "<sugar_path>/../db/relationships.yaml")
+makePackage -nCustomPackage -v2.0 mySugarInstance
 ```
+That would create ~/CustomPackage.zip and the version string in that installer
+would be '2.0'.
 
-
-### Write definition to a file
-`sugarcli {type}:dump`
-
-You can dump the current DB fields_meta_data (or relationships) contents into the definition file.
-
-You can also use the `--add`, `--del`, `--update` flags to only add, delete or update fields (or relationships).
-
-The fields specified after the command line will allow you to act only on specific fields (or relationships).
-
-#### `metadata:dumptofile` Parameters
+You could now add data to the installer with
 ```bash
--a, --add                          Add new fields from the DB to the definition file.
--d, --del                          Delete fields not present in the DB from the metadata file.
--u, --update                       Update the metadata file for modified fields in the DB.
--p, --path=PATH                    Path to SugarCRM installation.
--m, --metadata-file=METADATA-FILE  Path to the metadata file. (default: "<sugar_path>/../db/fields_meta_data.yaml")
+makePackage -d -nCustomPackage -v2.0 mySugarInstance
 ```
+That would collect a dump of all the tables accociated with your custom modules
+and makes post_install scripts out of them.  With the -e command you can make the script
+truncate the table before the import.
 
-#### `rels:dumptofile` Parameters
+You can also add other tables to the scripts like the reports table (-r) and all the ACL
+related tables (-a).
+
+You can also create 'update' installers by using the -u and -s parameters.  The 'update'
+parameter (-u) allows you to include only files that were updated recently.  For example
+
 ```bash
--a, --add             Add new relationships from the DB to the definition file.
--d, --del             Delete relationships not present in the DB
--u, --update          Update the relationships in the DB.
--p, --path=PATH       Path to SugarCRM installation.
-    --file=FILE       Path to the rels file. (default: "<sugar_path>/../db/relationships.yaml")
+MakePackage -u15 mySugarInstance
 ```
 
+Will make a package that only includes files that were updated in the last 15 minutes.  
+This parameter only works on files, not database entries. So if you used the command
 
-### Get the Status
-`sugarcli {type}:status -p path/to/sugar`
-
-This will show which fields are differing between the definition file and the database.
-
-#### `metadata:status` Parameters
 ```bash
--p, --path=PATH                    Path to SugarCRM installation.
--m, --metadata-file=METADATA-FILE  Path to the metadata file. (default: "<sugar_path>/../db/fields_meta_data.yaml")
+makePackage -du15 mySugarInstance
 ```
 
-#### `rels:status` Parameters
+you would get a installer that had the files from the last 15 minutes but all the 
+data in the table. [SLATED TO BE FIXED IN VERSION 3.0]
+
+The 'search' parameter allows you to include all files that include a search term.  For
+example
+
 ```bash
--p, --path=PATH       Path to SugarCRM installation.
-    --file=FILE       Path to the rels file. (default: "<sugar_path>/../db/relationships.yaml")
+makePackage -sbugfix_020117 mySugarInstance
 ```
 
+would only include files that had that search term in them.  I normally put these search
+terms in the beginning comments like
 
-## Inventory
-The main command is `./sugarcli.phar inventory`
+```php
+<?php
+//bugfix_020117
+```
+You can mix the two together like
 
-Subcommands are :
 ```bash
-./sugarcli.phar inventory:facter
-./sugarcli.phar inventory:agent
+makePackage -u15 -sbugfix_020117 mySugarInstance
 ```
 
-### Get Facts about your environment.
-`./sugarcli.phar inventory:facter --path <sugracrm_path> --format yml` will give you a yaml file with various information about
-the system and the sugarcrm instance.
+Will do just what you would expect it to do.
 
-#### `inventory:facter` Parameters
+###Set permissions on a SugarCRM instance
 ```bash
--F, --custom-fact=CUSTOM-FACT  Add or override facts. Format: path.to.fact:value (multiple values allowed)
--f, --format=FORMAT            Specify the output format. (json|yml|xml). [default: "yml"]
--p, --path=PATH                Path to SugarCRM installation.
+Usage: perms [INSTANCE_NAME]
+Reset owners and permissions on all SugarCRM files.
+
+example: perms mySugarInstance
 ```
 
-### Report information to an inventory server.
-`./sugarcli.phar inventory:agent --path <sugarcrm_path> --account-name 'Name of client' <inventory_url> <username> <password>`
+This will set all the permissions and owners in a SugarCRM instance
 
-This will send all the gathered facts to the inventory server.
-
-#### `inventory:agent` Parameters
+###Run a Quick Repair and Rebuild on a SugarCRM instance
 ```bash
--F, --custom-fact=CUSTOM-FACT    Add or override facts. Format: path.to.fact:value (multiple values allowed)
--p, --path=PATH                  Path to SugarCRM installation.
--a, --account-name=ACCOUNT-NAME  Name of the account.
+Usage: qrr [INSTANCE_NAME]
+Run a Quick Repair and Rebuild on a SugarCRM.
+
+example: qrr mySugarInstance
 ```
 
-
-## User management
-The main command is `./sugarcli.phar user`
-
-Subcommands are :
+###Make a SugarCRM instance safe to run
 ```bash
-./sugarcli.phar user:update
-./sugarcli.phar user:create
-./sugarcli.phar user:list
+Usage: safety [INSTANCE_NAME] [EMAIL_ADDRESS]
+Rewrite all email addresses in an instance so that email wont accidently go out while testing.  You
+can optionally specify an email address you have control of in the second param.
+
+example: safety mySugarInstance
+                        or
+         safety mySugarInstance ken.brill.plus@gmail.com
 ```
-
-### Update a user
-`./sugarcli.phar user:update --path <sugarcrm_path> --first-name=Admin --last-name='Test' myNewLogin` will update the user
-myNewLogin and set the first and last name.
-
-#### `user:update` Parameters
-```bash
--c, --create                 Create the user instead of updating it. Optional if called with users:create.
--f, --first-name=FIRST-NAME  First name of the user.
--l, --last-name=LAST-NAME    Last name of the user.
--P, --password=PASSWORD      Password of the user [UNSAFE].
-    --ask-password           Ask for user password.
--a, --admin=ADMIN            Make the user administrator. [yes/no]
--A, --active=ACTIVE          Make the user active. [yes/no]
--p, --path=PATH              Path to SugarCRM installation.
-```
-
-### Create a new user
-`./sugarcli.phar user:create --path <sugarcrm_path> --password=mypasword --admin=yes myNewLogin` will create a new admin user
-with login myNewLogin and password mypasword.
-
-#### `user:create` Parameters
-```bash
--c, --create                 Create the user instead of updating it. Optional if called with users:create.
--f, --first-name=FIRST-NAME  First name of the user.
--l, --last-name=LAST-NAME    Last name of the user.
--P, --password=PASSWORD      Password of the user [UNSAFE].
-    --ask-password           Ask for user password.
--a, --admin=ADMIN            Make the user administrator. [yes/no]
--A, --active=ACTIVE          Make the user active. [yes/no]
--p, --path=PATH              Path to SugarCRM installation.
-```
-
-
-### List users of an instance.
-`./sugarcli.phar user:list --path <sugarcrm_path>` will give you a nice output of the users.
-
-You can also limit the result to a specific username (`--username`)  and change the output format (`--format`) to json, yml or xml.
-
-#### `user:list` Parameters
-```bash
--u, --username=USERNAME  Login of the user.
--f, --format=FORMAT      Output format. (text|json|yml|xml) [default: "text"]
--F, --fields=FIELDS      List of comma separated field name. [default: "id,user_name,is_admin,status,first_name,last_name"]
--l, --lang=LANG          Lang for display. [default: "en_us"]
--p, --path=PATH          Path to SugarCRM installation.
-```
-
-
-## System
-The main command is `./sugarcli.phar system`
-
-Subcommands are:
-```bash
-./sugarcli.phar system:quickrepair
-```
-
-### Do a Quick Repair & Rebuild
-`./sugarcli.phar system:quickrepair --path <sugarcrm_path>` will do a basic Quick Repair & Rebuild of your SugarCRM instance.
-
-You can also use `--database` to see if Vardefs are synchronized with the Database.
-
-If they are not in sync you can run the queries by adding `--force`.
-
-Finally, if you want to have the full output from SugarCRM, add the verbose (`--verbose`) option.
-
-#### `system:quickrepair` Parameters
-```bash
--d, --database        Manage database changes.
--f, --force           Really execute the SQL queries (displayed by using -v).
--p, --path=PATH       Path to SugarCRM installation.
-```
-#### Example:
-The command `./sugarcli.phar system:quickrepair --database` has that type of output:
-```
-Reparation:
- - Repair Done.
-
-Database Messages:
-Database tables are synced with vardefs
-```
-
-
-## Logic Hooks
-The main command is `./sugarcli.phar hooks`
-
-Subcommands are:
-```bash
-./sugarcli.phar hooks:list
-```
-### List the existing logic hooks for a module
-`./sugarcli.phar hooks:list --path <sugarcrm_path> --module <module>` will generate of list of hooks for the specified module.
-
-That command lists the hooks with, for each, its Weight, description, the file where the class is defined, the method called, and where it's defined.
-
-You can also use `--compact` to have the basic informations about hooks (Weight / Description / Method).
-#### Parameters
-```
--m, --module=MODULE   Module's name.
-    --compact         Activate compact mode
--p, --path=PATH       Path to SugarCRM installation.
-```
-#### Example
-The command `./sugarcli.phar hooks:list --module Contacts --compact` gives that type of output, for a module with no Hooks:
-```
-+-----------+-------------+--------+
-| Hooks definition for Contacts    |
-+-----------+-------------+--------+
-| Weight    | Description | Method |
-+-----------+-------------+--------+
-| No Hooks for that module         |
-+-----------+-------------+--------+
-```
-
-
-## Vardefs Extractor
-### Extract fields and relationships for a module
-`./sugarcli.phar extract:fields --path <sugarcrm_path> --module <module>` will extract all the fields defined for a module, with theirs parameters (Label, content of dropdowns, dbType, etc ...) and write 2 csv files containing the data.
-#### Parameters
-```
--m, --module=MODULE   Module's name.
-    --lang=LANG       SugarCRM Language [default: "fr_FR"]
--p, --path=PATH       Path to SugarCRM installation.
-```
-
-
-## Code Generator
-The main command is `./sugarcli.phar code`
-
-Subcommands are:
-```bash
-./sugarcli.phar code:setupcomposer
-./sugarcli.phar code:button
-./sugarcli.phar code:execute:file
-```
-
-### Install composer in custom/
-`./sugarcli.phar code:setupcomposer --path <sugarcrm_path> --do` will create a new Util to use composer's autoloader and create a composer.json file that contains, by default, libsugarcrm autoloaded for Unit Tests.
-#### Parameters
-```
-    --do                Create the files
--r, --reinstall     Reinstall the files
-    --no-quickrepair    Do not launch a Quick Repair
--p, --path=PATH     Path to SugarCRM installation.
-```
-
-
-### Create a new button in a view
-`./sugarcli.phar code:button --path <sugarcrm_path> --module <module>` will create a new button in a record view of the module <module>
-
-That command automatically add buttons, their label and the JS triggered by the button to views, from a name.
-
-The file affected are :
-* custom/Extension/modules/<module>/Ext/Language/<current_lang>.php
-* custom/modules/<module>/clients/base/views/record/record.php
-* custom/modules/<module>/clients/base/views/record/record.js
-
-#### Parameters
-```
--m, --module=MODULE   Module name.
--a, --action=ACTION   Action: "add" / "delete" [default: "add"]
-    --name=NAME       Button Name
--t, --type=TYPE       For now only "dropdown" [default: "dropdown"]
--j, --javascript      [EXPERIMENTAL] Also create the JS
--p, --path=PATH       Path to SugarCRM installation.
-```
-
-As described, the --javascript is experimental. If you don't have a record.js file that should work well, else you have to check the generated file to make sure it didn't break anything.
-
-
-### Execute a php file from the SugarCRM context
-`./sugracli.phar code:execute:file --path <sugarcrm_path> [--user-id='1'] <test.php>` will execute the file `test.php` by loading
-first the sugarcrm environment. So the script can directly use the classes and db from sugar.
-You can also set the user_id from the command line to have another one than the default administrator.
-
-
-
-## Data Anonymization
-The main command is `./sugarcli.phar anonymize`
-
-If you need to anonymize the data from your database (**Be careful that command will overwrite the data directly in the database**)
-to give a dump to a partner or a developer, you can use sugarcli to do the work, because:
-* It connects directly to the SugarCRM DB
-* It is able to generate a configuration file automatically, without destroying the system tables (config / relationships, etc...)
-* Because it uses (Faker)[https://github.com/fzaninotto/Faker] to generate a data that looks *almost* real.
-
-Subcommands are:
-```bash
-./sugarcli.phar anonymize:config
-./sugarcli.phar anonymize:run
-```
-### Generate a configuration for your current SugarCRM
-`./sugarcli.phar anonymize:config --path <sugarcrm_path>` generate a yaml file that contains a full configuration, for all table that have been found and tries to guess what Faker method sugarcli has to use for each field of each table.
-
-#### Parameters
-```
-    --file=FILE                  Path to the configuration file [default: "../db/anonymization.yml"]
-    --ignore-table=IGNORE-TABLE  Table to ignore. Can be repeated (multiple values allowed)
-    --ignore-field=IGNORE-FIELD  Field to ignore. Can be repeated (multiple values allowed)
--p, --path=PATH                  Path to SugarCRM installation.
-
-
-```
-#### Example
-The command `./sugarcli.phar anonymize:config` creates a file that looks like:
-```yaml
-guesser_version: 1.0.0
-entities:
-    accounts:
-        cols:
-            name: { method: company }
-            description: { method: sentence, params: [20] }
-            facebook: { method: url }
-            twitter: { method: url }
-            googleplus: { method: url }
-            account_type: { method: randomElement, params: [['', Analyst, Competitor, Customer, Integrator]] }
-            industry: { method: randomElement, params: [['', Apparel, Banking, Biotechnology, Chemicals]] }
-            annual_revenue: { method: randomNumber, params: [4] }
-            phone_fax: { method: phoneNumber }
-            billing_address_street: { method: streetAddress }
-            billing_address_city: { method: city }
-            billing_address_state: { method: state }
-            billing_address_postalcode: { method: postcode }
-            billing_address_country: { method: country }
-            rating: { method: sentence, params: [8] }
-            phone_office: { method: phoneNumber }
-            phone_alternate: { method: phoneNumber }
-            website: { method: url }
-....
-```
-
-As you can see, the commands uses different methods to guess the type of faker method to use:
-* If it's a dropdown and it get the list of values from the vardefs
-* If it's a field that contains a known word it uses the right method (example .*_city = city)
-* Else it uses the dbType (varchar = sentence)
-
-You can change the content of the file once generated to match your criteras.
-
-
-### Run the anonymization
-**Be careful that command will overwrite the data directly in the database**
-
-`./sugarcli.phar anonymize:run --path <sugarcrm_path>` does the job !
-
-#### Parameters
-```
-    --file=FILE       Path to the configuration file [default: "../db/anonymization.yml"]
-    --force           Run the queries
-    --remove-deleted  Remove all records with deleted = 1. Won't be launched if --force is not set
-    --clean-cstm      Clean all records in _cstm that are not in the main table. Won't be launched if --force is not set
-    --sql             Display the SQL of UPDATE queries
-    --table=TABLE     Anonymize only that table (repeat for multiple values) (multiple values allowed)
--p, --path=PATH       Path to SugarCRM installation.
-
-```
-#### Example
-The command `./sugarcli.phar anonymize:run --table=accounts --force` gives an output that looks like:
-```
-Be careful, the anonymization is going to start
-That will overwrite every data in the Database !
-
-If you are sure, please type "yes" in uppercase
-YES
-Anonymizing accounts
- 50/50 [============================] 100%
-
-Emptying accounts_audit
-Emptying bugs_audit
-Emptying campaigns_audit
-Emptying cases_audit
-Emptying contacts_audit
-Emptying contracts_audit
-....
-
-Done in 0.42 sec (consuming 40.5Mb)
-
-....
-```
+When you install a customers instance on your local 

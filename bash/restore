@@ -2,8 +2,7 @@
 show_help() {
 cat << EOF
 Usage: ${0##*/} [-hd] [INSTANCE_NAME] [FILES_ZIP] [SQL_ZIP]
-Restore a SugarCRM instance to the directory [INSTANCE_NAME], both files and database zips
-must be specified.  The .htaccess file and config.php will be updated to correct values.
+Restore a SugarCRM instance to the directory [INSTANCE_NAME]. The .htaccess file and config.php will be updated to correct values.
 
     -h          display this help and exit
     -d          delete the destination directory
