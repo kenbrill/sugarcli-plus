@@ -1,0 +1,127 @@
+#!/usr/bin/bash
+
+# Usage info
+show_help() {
+cat << EOF
+Usage: ${0##*/} [-nvamcrtedhu#s$] [INSTANCE]...
+Dump the custom directory, custom modules and an array of tables to an installable package
+
+    -h          Display this help and exit
+    -n[string]  A name for the new package.
+    -v[number]  A version number for the new package. (ex 1.2)
+    -s[string]  Include only files that contain this string, AKA Search.
+    -a          Add the ACL/Roles tables to the package.
+    -t          Add the Teams tables to the package.
+    -r          Add the Reports table (saved_reports) to the package.
+    -m          Add the modulebuilder/ directory to the package.
+    -c          Add the custom fields table (fields_meta_data) to the package.
+    -d          Include all the data from custom modules in the package.
+    -e          Truncate tables where data is added, otherwise data will be updated
+    -o          Include only english language files in the package.
+    -u[number]  Include only files that were updated in the last 15 minutes.
+EOF
+}
+
+if [ $# -eq 0 ]; then
+    show_help
+    exit 0
+fi
+
+# Initialize our own variables:
+output_file=""
+command_string=""
+acl=0
+teams=0
+reports=0
+modulebuilder=0
+custom=0
+data=0
+onlyenglish=0
+empty=0
+time=0
+search=''
+pname='CustomFiles'
+printf -v version '%(%s)T' -1
+
+OPTIND=1
+# Resetting OPTIND is necessary if getopts was used previously in the script.
+# It is a good idea to make OPTIND local if you process options in a function.
+
+while getopts hatrmocdes:u:f:v:n: opt; do
+    case $opt in
+        h)
+            show_help
+            exit 0
+            ;;
+        a)  acl=$((acl+1))
+            ;;
+        t)  teams=$((teams+1))
+            ;;
+        r)  reports=$((reports+1))
+            ;;
+        m)  modulebuilder=$((modulebuilder+1))
+            ;;
+        c)  custom=$((custom+1))
+            ;;
+        d)  data=$((data+1))
+            ;;
+        o)  onlyenglish=$((onlyenglish+1))
+            ;;
+        e)  empty=$((empty+1))
+            ;;
+        u)  time="$OPTARG"
+            ;;
+        n)  pname="$OPTARG"
+            ;;
+        s)  search="$OPTARG"
+            ;;
+        v)  version="$OPTARG"
+            ;;
+        *)
+            show_help >&2
+            exit 1
+            ;;
+    esac
+done
+shift "$((OPTIND-1))" # Shift off the options and optional --.
+
+if [ $empty -gt 0 ]; then
+    command_string+="--empty "
+fi
+if [ $acl -gt 0 ]; then
+    command_string+="--acl "
+fi
+if [ $teams -gt 0 ]; then
+    command_string+="--teams "
+fi
+if [ $reports -gt 0 ]; then
+    command_string+="--reports "
+fi
+if [ $custom -gt 0 ]; then
+    command_string+="--customFields "
+fi
+if [ $data -gt 0 ]; then
+    command_string+="--data "
+fi
+if [ $modulebuilder -gt 0 ]; then
+    command_string+="--modulebuilder "
+fi
+if [ $onlyenglish -gt 0 ]; then
+    command_string+="--onlyenglish "
+fi
+if [ $time -gt 0 ]; then
+    command_string+="--updated=$time "
+fi
+command_string+="--packageName=$pname "
+command_string+="--packageVersion=$version "
+if [[ $search = *[!\ ]* ]]; then
+    command_string+="--search=$search "
+fi
+source sugarcli.cfg
+
+#printf "php $sugarpath/sugarcli/bin/sugarcli code:makePackage %s--path=$sugarpath/%s\n" "$command_string" "$@"
+
+php $sugarpath/sugarcli/bin/sugarcli code:makePackage $command_string --path=$sugarpath/$@
+
+# Everything that's left in "$@" is a non-option.  In our case, a FILE to process.
+#printf 'php /var/www/html/sugarcli/bin/sugarcli code:makePackage %s--path=/var/www/html/%s\n' "$command_string" "$@"

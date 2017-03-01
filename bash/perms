@@ -1,0 +1,20 @@
+#!/usr/bin/bash
+show_help() {
+cat << EOF
+Usage: ${0##*/} [INSTANCE_NAME]
+Reset owners and permissions on all SugarCRM files.
+
+example: ${0##*/} mySugarInstance
+
+EOF
+}
+
+if [ $# -eq 0 ]; then
+    show_help
+    exit 0
+fi
+
+source sugarcli.cfg
+echo "Resetting permissions on $1"
+sudo php $sugarpath/sugarcli/bin/sugarcli system:resetPerms --path=$sugarpath/$1
+ 

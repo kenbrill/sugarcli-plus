@@ -1,0 +1,25 @@
+#!/usr/bin/bash
+
+# Usage info
+show_help() {
+cat << EOF
+Usage: ${0##*/} [-hducs] [INSTANCE_NAME]...
+Backup a SugarCRM instance to your home directory
+
+    -h          Display this help and exit
+    -d          Delete previous backup from your home directory
+    -u          Include upload/ directory (excluded by default)
+    -c          Include cache/ directory  (excluded by default)
+    -s          Use simple names (no date in name)
+
+    Example:   backup -d SugarCustomer
+EOF
+}
+if [ $# -eq 0 ]; then
+    show_help
+    exit 0
+fi
+source sugarcli.cfg
+echo "Backup $1"
+php $sugarpath/sugarcli/bin/sugarcli install:backup --path=$sugarpath/$1
+ 

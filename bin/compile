@@ -1,0 +1,139 @@
+#!/usr/bin/env php
+<?php
+
+if (ini_get('phar.readonly') == '1') {
+    echo "usage: php -dphar.readonly=0 $argv[0]\n";
+    exit(1);
+}
+function exception_error_handler($errno, $errstr, $errfile, $errline)
+{
+    throw new ErrorException($errstr, $errno, 0, $errfile, $errline);
+}
+set_error_handler("exception_error_handler");
+
+
+define('ROOT_DIR', dirname(__DIR__));
+define('BUILD_TARGET', ROOT_DIR . '/build/sugarcli.phar');
+
+require ROOT_DIR . '/vendor/autoload.php';
+
+use Symfony\Component\Finder\Finder;
+use Symfony\Component\Process\Process;
+
+function echo_step($msg = null)
+{
+    if (is_null($msg)) {
+        print("[ OK ]" . PHP_EOL);
+        return;
+    }
+    printf("%-50s", $msg);
+}
+
+// Remove path prefix and add to phar
+function addFile($phar, $file)
+{
+    $path = str_replace(ROOT_DIR . '/', '', $file);
+    if (!is_readable($file)) {
+        print "Error: Unable to read or file is missing: $file" . PHP_EOL;
+        exit(1);
+    }
+    $content = file_get_contents($file);
+    /* print "addFile: $path = $file\n"; */
+
+    // Remove shebang and set version.
+    if ($path == 'bin/sugarcli') {
+        $content = preg_replace('{^#!/usr/bin/env php\s*}', '', $content);
+
+        $version = 'unknown dev';
+        $process = new Process('git describe --tags HEAD', ROOT_DIR);
+        $process->run();
+        if ($process->isSuccessful()) {
+            $version = trim($process->getOutput());
+        }
+        $content = str_replace('@sugarcli_version@', $version, $content);
+    }
+
+    $phar[$path] = $content;
+    // compress using Gzip
+    $phar[$path]->compress(Phar::GZ);
+}
+
+if (!file_exists(dirname(BUILD_TARGET))) {
+    mkdir(dirname(BUILD_TARGET), 0750, true);
+}
+
+// Remove existing phar file to rewrite it.
+if (file_exists(BUILD_TARGET)) {
+    unlink(BUILD_TARGET);
+}
+
+$phar = new \Phar(BUILD_TARGET, 0, 'sugarcli.phar');
+$phar->startBuffering();
+
+// Find and include all php files.
+echo_step("Add php files.");
+$finder = new Finder();
+$finder->files()
+    ->ignoreVCS(true)
+    ->ignoreDotFiles(true)
+    ->name('*.php')
+    ->in(ROOT_DIR . '/src')
+    ->in(ROOT_DIR . '/vendor/composer')
+    ->in(ROOT_DIR . '/vendor/csanquer')
+    ->in(ROOT_DIR . '/vendor/doctrine')
+    ->in(ROOT_DIR . '/vendor/fzaninotto')
+    ->in(ROOT_DIR . '/vendor/guzzle')
+    ->in(ROOT_DIR . '/vendor/inetprocess')
+    ->in(ROOT_DIR . '/vendor/jms')
+    ->in(ROOT_DIR . '/vendor/linfo')
+    ->in(ROOT_DIR . '/vendor/phpcollection/phpcollection')
+    ->in(ROOT_DIR . '/vendor/phpoption/phpoption')
+    ->in(ROOT_DIR . '/vendor/psr')
+    ->in(ROOT_DIR . '/vendor/ramsey')
+    ->in(ROOT_DIR . '/vendor/symfony')
+    ->exclude('test')
+    ->exclude('tests')
+    ->exclude('Tests')
+;
+
+foreach ($finder as $file) {
+    addFile($phar, $file);
+}
+echo_step();
+
+// Find and include all res files.
+echo_step("Add resources files.");
+$finder = new Finder();
+$finder->files()
+    ->ignoreVCS(true)
+    ->ignoreDotFiles(true)
+    ->in(ROOT_DIR . '/res');
+
+foreach ($finder as $file) {
+    addFile($phar, $file);
+}
+echo_step();
+
+// Add autoload and bin
+echo_step("Add autoload and bin files.");
+addFile($phar, ROOT_DIR . '/vendor/guzzle/guzzle/src/Guzzle/Http/Resources/cacert.pem');
+addFile($phar, ROOT_DIR . '/vendor/inetprocess/libinventoryclient/src/InventoryService.json');
+addFile($phar, ROOT_DIR . '/vendor/autoload.php');
+addFile($phar, ROOT_DIR . '/bin/sugarcli');
+echo_step();
+
+echo_step("Set stub.");
+$phar->setStub(<<<EOB
+#!/usr/bin/env php
+<?php
+Phar::mapPhar('sugarcli.phar');
+include 'phar://sugarcli.phar/bin/sugarcli';
+__HALT_COMPILER();
+EOB
+);
+echo_step();
+
+$phar->stopBuffering();
+
+echo $phar->count() . " files compiled." . PHP_EOL;
+echo "Phar generated at " . BUILD_TARGET . PHP_EOL;

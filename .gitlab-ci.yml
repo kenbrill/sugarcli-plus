@@ -1,0 +1,37 @@
+# Automatic build and test against SugarCRM 7.X
+# Push to github on success.
+
+stages:
+    - test
+    - build
+    - publish
+
+phpunit:
+    stage: test
+    script:
+        - composer install --quiet -o
+        - bin/phpunit --color=never
+phar:
+    stage: build
+    script:
+        - composer install --no-dev --quiet -o
+        - mkdir build
+        - ulimit -Sn 4096
+        - php -dphar.readonly=0 bin/box build
+    artifacts:
+        paths:
+            - build/sugarcli.phar
+mirror:
+    stage: publish
+    only:
+        - master
+    script:
+        - git push git@github.com:inetprocess/sugarcli.git HEAD:master
+
+mirror_tags:
+    stage: publish
+    only:
+        - tags
+    script:
+        - git push --tags git@github.com:inetprocess/sugarcli.git
+

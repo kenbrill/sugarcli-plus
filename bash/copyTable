@@ -1,0 +1,48 @@
+#!/usr/bin/bash
+show_help() {
+cat << EOF
+Usage: ${0##*/} [-d] [INSTANCE_NAME] [TABLE_NAME] [NEW_TABLE_NAME]
+Make a copy of a database table.
+
+    -d          Drop [NEW_TABLE_NAME] if it exists
+    -h          Display this help and exit
+
+example: ${0##*/} -d mySugarInstance accounts accounts_temp
+
+EOF
+}
+
+# Initialize our own variables:
+output_file=""
+command_string=""
+drop=0
+
+OPTIND=1
+# Resetting OPTIND is necessary if getopts was used previously in the script.
+# It is a good idea to make OPTIND local if you process options in a function.
+
+while getopts hd opt; do
+    case $opt in
+        h)
+            show_help
+            exit 0
+            ;;
+        d)  drop=$((drop+1))
+            ;;
+        *)
+            show_help >&2
+            exit 1
+            ;;
+    esac
+done
+shift "$((OPTIND-1))" # Shift off the options and optional --.
+
+if [ $drop -gt 0 ]; then
+    command_string+="--delete "
+fi
+
+stringarray=($@)
+source sugarcli.cfg
+php $sugarpath/sugarcli/bin/sugarcli database:copyTable $command_string --path=$sugarpath/${stringarray[0]} --from=${stringarray[1]} --to=${stringarray[2]}
+
+ 

@@ -1,0 +1,77 @@
+#!/usr/bin/bash
+show_help() {
+cat << EOF
+Usage: ${0##*/} [-hd] [INSTANCE_NAME] [FILES_ZIP] [SQL_ZIP]
+Restore a SugarCRM instance to the directory [INSTANCE_NAME], both files and database zips
+must be specified.  The .htaccess file and config.php will be updated to correct values.
+
+    -h          display this help and exit
+    -d          delete the destination directory
+    -u          Leave the upload directory from the instance in place
+    -c          Leave the cache directory from the instance in place
+
+example: restore mySugarInstance ~/mySugarInstance.tgz ~/mySugarInstance.sql.gz
+
+EOF
+}
+
+delete_destination=0
+
+#these are default actions the user would override
+delete_cache=1
+delete_upload=1
+
+command_string=""
+
+if [[ -z $1 ]]; then
+    show_help
+    exit 0
+fi
+
+OPTIND=1
+# Resetting OPTIND is necessary if getopts was used previously in the script.
+# It is a good idea to make OPTIND local if you process options in a function.
+
+while getopts hdcu opt; do
+    case $opt in
+        h)
+            show_help
+            exit 0
+            ;;
+        d)  delete_destination=$((delete_destination+1))
+            ;;
+        c)  delete_cache=0
+            ;;
+        u)  delete_upload=0
+            ;;
+        *)
+            show_help >&2
+            exit 1
+            ;;
+    esac
+done
+
+shift "$((OPTIND-1))" # Shift off the options and optional --.
+
+if [ $delete_destination -gt 0 ]; then
+    echo "Delete Previous destination directory and database table"
+    command_string+="--delete_destination "
+fi
+
+if [ $delete_cache -gt 0 ]; then
+    echo "Delete the cache/ directory from the ZIP file."
+    command_string+="--delete_cache "
+fi
+
+if [ $delete_upload -gt 0 ]; then
+    echo "Delete the upload/ directory from the ZIP file."
+    command_string+="--delete_upload "
+fi
+
+source sugarcli.cfg
+echo "Restore instance to /var/www/html/$1"
+if [ $# -eq 3 ]; then
+    sudo php $sugarpath/sugarcli/bin/sugarcli install:restore $command_string--path=$sugarpath/$1 --files=$2 --sql=$3
+else
+    sudo php $sugarpath/sugarcli/bin/sugarcli install:restore $command_string--path=$sugarpath/$1 --files=$2
+fi

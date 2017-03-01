@@ -1,0 +1,65 @@
+#!/usr/bin/bash
+show_help() {
+cat << EOF
+Usage: ${0##*/} [-hd] [NEW_INSTANCE_NAME] [CURRENT_INSTANCE_NAME]
+Clone a SugarCRM instance to the directory [NEW_INSTANCE_NAME] using the [CURRENT_INSTANCE_NAME]
+as the source.
+    -h          display this help and exit
+    -d          delete the destination directory
+example: ${0##*/} myNewSugarInstance myCurrentSugarInstance
+
+EOF
+}
+
+delete_destination=0
+command_string=""
+
+if [[ -z $1 ]]; then
+    show_help
+    exit 0
+fi
+if [[ -z $2 ]]; then
+    show_help
+    exit 0
+fi
+
+OPTIND=1
+# Resetting OPTIND is necessary if getopts was used previously in the script.
+# It is a good idea to make OPTIND local if you process options in a function.
+
+while getopts hd opt; do
+    case $opt in
+        h)
+            show_help
+            exit 0
+            ;;
+        d)  delete_destination=$((delete_destination+1))
+            ;;
+        *)
+            show_help >&2
+            exit 1
+            ;;
+    esac
+done
+
+shift "$((OPTIND-1))" # Shift off the options and optional --.
+stringarray=($@)
+
+if [ $delete_destination -gt 0 ]; then
+    echo "Delete Previous destination direcotry and database table"
+    command_string+="--delete_destination "
+fi
+
+source sugarcli.cfg
+echo "Clone $2 to $1"
+php $sugarpath/sugarcli/bin/sugarcli install:backup --path=$sugarpath/$2 --simple_names --delete_previous
+
+echo "Moving files"
+sudo mv ~/backup_$2.tar.gz /tmp/backup_$2.tar.gz
+sudo mv ~/backup_$2.sql.gz /tmp/backup_$2.sql.gz
+
+echo "Starting Restore"
+sudo php $sugarpath/sugarcli/bin/sugarcli install:restore --path=$sugarpath/$1 --files=/tmp/backup_$2.tar.gz --sql=/tmp/backup_$2.sql.gz $command_string
+
+rm /tmp/backup_$2.tar.gz
+rm /tmp/backup_$2.sql.gz

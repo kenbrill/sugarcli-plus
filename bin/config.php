@@ -1,0 +1,2 @@
+<?php
+    $wwwPath="/www";

@@ -1,0 +1,17 @@
+#!/usr/bin/bash
+show_help() {
+cat << EOF
+Usage: ${0##*/} [INSTANCE_NAME]
+Clears the cache directory and truncates the metadata_cache table for a SugarCRM instance
+
+EOF
+}
+
+if [ $# -eq 0 ]; then
+    show_help
+    exit 0
+fi
+source sugarcli.cfg
+echo "Clearing cache on $1"
+php $sugarpath/sugarcli/bin/sugarcli system:clearCache --path=$sugarpath/$1
+ 

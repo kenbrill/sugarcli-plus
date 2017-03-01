@@ -1,0 +1,22 @@
+# Vim
+.*.sw*
+/Session.vim
+
+# phpunit
+/phpunit.phar
+/phpunit.xml
+/reports/*
+# Build
+/build
+
+# Composer
+/composer.phar
+/vendor
+
+# Binaries
+/sugarcli.phar
+
+/test
+
+.sugarcli_testrc
+.sugarclirc

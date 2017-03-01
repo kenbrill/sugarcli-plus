@@ -1,0 +1,27 @@
+#!/usr/bin/bash
+show_help() {
+cat << EOF
+Usage: ${0##*/} [INSTANCE_NAME]
+Run a Quick Repair and Rebuild on a SugarCRM.
+
+example: ${0##*/} mySugarInstance
+
+EOF
+}
+
+
+if [ $# -eq 0 ]; then
+    show_help
+    exit 0
+fi
+
+echo "Reparing $1"
+source sugarcli.cfg
+if [ $# -eq 1 ]; then
+  php $sugarpath/sugarcli/bin/sugarcli system:quickRepair --path=$sugarpath/$1
+elif  [ $# -eq 2 ]; then
+  php $sugarpath/sugarcli/bin/sugarcli system:quickRepair --path=$sugarpath/$1 $2
+elif  [ $# -eq 3 ]; then
+  php $sugarpath/sugarcli/bin/sugarcli system:quickRepair --path=$sugarpath/$1 $2 $3
+fi
+ 
