@@ -1,0 +1,63 @@
+#!/usr/bin/bash
+show_help() {
+cat << EOF
+Usage: ${0##*/} [-hcm] [NEW_INSTANCE_NAME] [CURRENT_INSTANCE_NAME]
+Run php source files through php -l, default with no command like parameters is to
+process the whole instance.  The files config.php and config_overide.php will be
+sscanned no matter what parameters are chosen.
+
+    -h          display this help and exit
+    -c          Process files in the custom/ directory
+    -m          Process files in the modules/ directory
+
+example: ${0##*/} -cm myNewSugarInstance
+
+EOF
+}
+
+custom=0
+modules=0
+command_string=""
+
+if [[ -z $1 ]]; then
+    show_help
+    exit 0
+fi
+if [[ -z $2 ]]; then
+    show_help
+    exit 0
+fi
+
+OPTIND=1
+# Resetting OPTIND is necessary if getopts was used previously in the script.
+# It is a good idea to make OPTIND local if you process options in a function.
+
+while getopts hcm opt; do
+    case $opt in
+        h)
+            show_help
+            exit 0
+            ;;
+        c)  custom=$((custom+1))
+            ;;
+        m)  modules=$((modules+1))
+            ;;
+        *)
+            show_help >&2
+            exit 1
+            ;;
+    esac
+done
+
+shift "$((OPTIND-1))" # Shift off the options and optional --.
+
+if [ $custom -gt 0 ]; then
+    command_string+="--custom "
+fi
+if [ $modules -gt 0 ]; then
+    command_string+="--modules "
+fi
+
+source sugarcli.cfg
+
+php $sugarpath/sugarcli/bin/sugarcli code:phpLint $command_string--path=$sugarpath/$@

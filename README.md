@@ -213,3 +213,17 @@ the admin user if it was repurposed or deleted.
 
 example: setPasswords mySugarInstance
 ```
+
+###Test PHP Files in an instance for errors
+```bash
+Usage: phpLint [-hcm] [NEW_INSTANCE_NAME] [CURRENT_INSTANCE_NAME]
+Run php source files through php -l, default with no command like parameters is to
+process the whole instance.  The files config.php and config_overide.php will be
+sscanned no matter what parameters are chosen.
+
+    -h          display this help and exit
+    -c          Process files in the custom/ directory
+    -m          Process files in the modules/ directory
+
+example: phpLint -cm myNewSugarInstance
+```

@@ -120,6 +120,7 @@ EOF;
         $commands[] = new \SugarCli\Console\Command\Code\ExecuteFileCommand();
         $commands[] = new \SugarCli\Console\Command\Code\SetupComposerCommand();
         $commands[] = new \SugarCli\Console\Command\Code\MakePackageCommand();
+        $commands[] = new \SugarCli\Console\Command\Code\phpLintCommand();
         $commands[] = new \SugarCli\Console\Command\Database\CleanCommand();
         $commands[] = new \SugarCli\Console\Command\Database\CopyTableCommand();
         $commands[] = new \SugarCli\Console\Command\ExtractFieldsCommand();
