@@ -12,7 +12,7 @@ Backup a SugarCRM instance to your home directory
     -c          Include cache/ directory  (excluded by default)
     -s          Use simple names (no date in name)
 
-    Example:   backup -d SugarCustomer
+    Example:   ${0##*/} -d SugarCustomer
 EOF
 }
 if [ $# -eq 0 ]; then

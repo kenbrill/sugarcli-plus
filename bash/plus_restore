@@ -9,7 +9,7 @@ Restore a SugarCRM instance to the directory [INSTANCE_NAME]. The .htaccess file
     -u          Leave the upload directory from the instance in place
     -c          Leave the cache directory from the instance in place
 
-example: restore mySugarInstance ~/mySugarInstance.tgz ~/mySugarInstance.sql.gz
+example: ${0##*/} mySugarInstance ~/mySugarInstance.tgz ~/mySugarInstance.sql.gz
 
 EOF
 }

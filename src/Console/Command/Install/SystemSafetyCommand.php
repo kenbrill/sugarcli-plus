@@ -3,10 +3,8 @@
  * SugarCLI
  *
  * PHP Version 5.3 -> 5.4
- * SugarCRM Versions 6.5 - 7.6
+ * SugarCRM Versions 6.5 - 7.9
  *
- * @author Rémi Sauvat
- * @author Emmanuel Dyan
  * @author Kenneth Brill
  *
  * @copyright 2005-2016 iNet Process
