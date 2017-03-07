@@ -1,0 +1,14 @@
+# Editor files.
+.*.sw*
+*~
+
+# Build and tests artifacts
+/build
+
+# Composer
+/composer.lock
+/vendor/
+
+#PHPUnit/Phing
+/phpunit.xml
+/reports/

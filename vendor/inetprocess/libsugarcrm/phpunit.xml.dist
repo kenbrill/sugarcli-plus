@@ -1,0 +1,36 @@
+<phpunit
+  bootstrap="vendor/autoload.php"
+  colors="true"
+  beStrictAboutTestsThatDoNotTestAnything="true"
+  >
+  <php>
+    <env name='SUGARCRM_PATH' value="../sugarcrm"/>
+    <env name='SUGARCRM_CURRENT_USER_ID' value="1"/>
+
+    <env name='SUGARCRM_DB_USER' value='' />
+    <env name='SUGARCRM_DB_PASSWORD' value='' />
+    <env name='SUGARCRM_DB_NAME' value='' />
+    <env name='SUGARCRM_DB_HOST' value='127.0.0.1' />
+    <env name='SUGARCRM_DB_PORT' value='3306' />
+
+    <!-- E_ALL & ~E_STRICT = 30719 -->
+    <ini name="error_reporting" value="30719"/>
+  </php>
+  <testsuites>
+    <!-- unit tests on EntryPoint must run first because it can be instantiated only once -->
+    <testsuite name="EntryPoint">
+        <!-- Test first for constant sugarEntry -->
+        <file>tests/ApplicationTest.php</file>
+        <!-- Test second to test entry point before global initialization -->
+        <file>tests/EntryPointTest.php</file>
+    </testsuite>
+    <testsuite name="Inet">
+        <directory>tests</directory>
+    </testsuite>
+  </testsuites>
+ <filter>
+    <whitelist processUncoveredFilesFromWhitelist="true">
+      <directory suffix=".php">src</directory>
+    </whitelist>
+  </filter>
+</phpunit>
