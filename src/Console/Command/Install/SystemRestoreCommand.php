@@ -116,7 +116,6 @@
             switch ($fileCompressionType) {
                 case 'zip':
                     $this->decompressFiles($input, $output, false);
-                    exit(1);
                     break;
                 case 'gz':
                 case 'tgz':
@@ -132,7 +131,7 @@
             if(!empty($this->SQLName)) {
                 $filesInfo           = pathinfo($this->SQLName);
                 $fileCompressionType = $filesInfo['extension'];
-
+                $output->writeln(PHP_EOL . "<info>Processing SQL</info>");
                 switch ($fileCompressionType) {
                     case 'zip':
                         $this->decompressSQL($input, $output, false);
@@ -175,31 +174,28 @@
             $tempDir = '/tmp/temp' . date('U');
             mkdir($tempDir, 777);
             $output->writeln(PHP_EOL . "<comment> --> Decompressing files...</comment>");
-            //exec("tar zxvf {$this->filesName} -C {$tempDir}", $commandOutput);
             if($gzip) {
                 passthru("pv {$this->filesName} | tar xzf - -C {$tempDir}");
             } else {
                 $cwd=getcwd();
                 chdir($tempDir);
-                passthru("unzip {$this->filesName}");
+                passthru("unzip -q {$this->filesName}");
                 chdir($cwd);
             }
             $rootPath = $this->findInstance($tempDir);
             if(!empty($rootPath)) {
                 $output->writeln("<info> ---> Found root instance at {$rootPath}</info>");
-                if($this->delete_cache) {
+                if ($this->delete_cache && file_exists("{$rootPath}/cache")) {
                     $output->writeln("<info> ---> Deleting {$rootPath}/cache/*</info>");
                     passthru("find {$rootPath}/cache -type f | pv -s $(find {$rootPath}/cache -type f | wc -c) | xargs rm");
                     //exec("sudo rm -Rfv {$rootPath}/cache/*");
                 }
-                if($this->delete_upload) {
+                if ($this->delete_upload && file_exists("{$rootPath}/upload")) {
                     $output->writeln("<info> ---> Deleting {$rootPath}/upload/*</info>");
                     passthru("find {$rootPath}/upload -type f | pv -s $(find {$rootPath}/upload -type f | wc -c) | xargs rm");
                     //exec("sudo rm -Rfv {$rootPath}/upload/*");
                 }
                 $output->writeln("<info> ---> Copying files into place...</info>");
-                //exec("cp -Rfv {$rootPath}/* {$this->wwwPathName}/{$this->instanceName}/", $commandOutput);
-                //passthru("/www/sugarcli/bin/ken -Rg {$rootPath}/* {$this->wwwPathName}/{$this->instanceName}/");
                 $cwd=getcwd();
                 chdir($rootPath);
                 passthru("find . -type f | pv -s $(find . -type f | wc -c) | xargs -i cp {} --parents {$this->wwwPathName}/{$this->instanceName}/$(dirname {})");
@@ -232,14 +228,16 @@
             exec("sudo rm -Rfv {$tempDir}", $commandOutput);
         }
 
+        /**
+         * @param InputInterface $input
+         * @param OutputInterface $output
+         * @param bool $gzip
+         */
         private function decompressSQL(InputInterface $input, OutputInterface $output, $gzip=true)
         {
-            $SQLFileName = basename($this->SQLName);
             $tempDir     = '/tmp/temp' . date('u');
             mkdir($tempDir, 777);
             $output->writeln(PHP_EOL . "<comment> ---> Decompressing SQL file '{$this->SQLName}'...</comment>");
-            //copy($this->SQLName, $tempDir . "/" . $SQLFileName);
-            //exec("gunzip " . $tempDir . "/" . $SQLFileName, $commandOutput);
             if($gzip) {
                 passthru("pv {$this->SQLName} | tar xzf - -C {$tempDir}");
             } else {
